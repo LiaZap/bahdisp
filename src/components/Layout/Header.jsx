@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { FiWifi, FiWifiOff, FiBell, FiSearch, FiX } from 'react-icons/fi'
+import { FiWifi, FiWifiOff, FiSearch, FiX } from 'react-icons/fi'
+import NotificationDropdown from './NotificationDropdown'
 
 export default function Header({ title }) {
   const [apiStatus, setApiStatus] = useState('checking')
@@ -45,10 +46,7 @@ export default function Header({ title }) {
         </div>
 
         {/* Notifications */}
-        <button className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-          <FiBell className="w-5 h-5" />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-        </button>
+        <NotificationDropdown />
 
         {/* API Status */}
         <div

@@ -20,7 +20,16 @@
       "Bash(npm run *)",
       "Bash(findstr /v \"TOKEN SECRET\")",
       "Bash(git init *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(rm -f '\\({' '\\({,' ',+' '[,+' 'r.status' 'setTimeout\\(r' '{,' '{,+')",
+      "Bash(git rm *)",
+      "Bash(grep -vE \"\\(Dockerfile|env\\\\.sample|package|docker-compose|index\\\\.html|postcss|tailwind|vite|gitignore|dockerignore|env\\\\.example|env$|claude\\)\")",
+      "Bash(grep -E \"^\\\\.env$\")",
+      "Bash(git config *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git branch *)",
+      "Bash(git remote *)",
+      "Bash(git push *)"
     ]
   }
 }
