@@ -29,7 +29,10 @@
       "Bash(git commit -m ' *)",
       "Bash(git branch *)",
       "Bash(git remote *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(awk '$5 == 0 {print $NF}')",
+      "Bash(rm -f 'r.status' 'setTimeout\\(r' '{,-')",
+      "Bash(git commit -m 'Remove stray empty files *)"
     ]
   }
 }
