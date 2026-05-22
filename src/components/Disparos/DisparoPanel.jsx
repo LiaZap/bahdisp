@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import Header from '../Layout/Header'
 import WhatsAppPreview from './WhatsAppPreview'
 import toast from 'react-hot-toast'
-import { vagasApi, medicosApi, disparosApi, agendamentosApi } from '../../services/api'
+import { vagasApi, medicosApi, disparosApi, agendamentosApi, instancesApi } from '../../services/api'
 import { gerarMensagem as gerarMensagemVariada, gerarAmostras, variarCustom } from '../../utils/messageVariation'
 import {
   FiSend, FiUsers, FiFilter, FiRefreshCw, FiAlertTriangle,
@@ -46,17 +46,27 @@ export default function DisparoPanel() {
   const [showAmostras, setShowAmostras] = useState(false)
   const [showAgendar, setShowAgendar] = useState(false)
   const [agendamentoData, setAgendamentoData] = useState('')
+  const [instances, setInstances] = useState([])
+  const [instanciaSelecionada, setInstanciaSelecionada] = useState('')
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [vagasRes, medicosRes] = await Promise.all([
+        const [vagasRes, medicosRes, instRes] = await Promise.all([
           vagasApi.list().catch(() => null),
           medicosApi.list({ ativo: true }).catch(() => null),
+          instancesApi.list().catch(() => null),
         ])
         if (Array.isArray(vagasRes?.data)) setVagas(vagasRes.data)
         if (Array.isArray(medicosRes?.data)) {
           setMedicos(medicosRes.data.map(m => ({ ...m, selecionado: false })))
+        }
+        if (Array.isArray(instRes?.data)) {
+          setInstances(instRes.data)
+          const padrao = instRes.data.find(i => i.padrao && i.status === 'conectado')
+            || instRes.data.find(i => i.padrao)
+            || instRes.data.find(i => i.status === 'conectado')
+          if (padrao) setInstanciaSelecionada(padrao._id)
         }
       } catch {
         /* keep mock data as fallback */
@@ -116,6 +126,7 @@ export default function DisparoPanel() {
         templateId: templateSelecionado,
         mensagemCustom: mensagemCustom || undefined,
         antiBlock,
+        instanceId: instanciaSelecionada || undefined,
         agendadoPara: quando,
       })
       toast.success(`Disparo agendado para ${quando.toLocaleString('pt-BR')}!`)
@@ -163,6 +174,7 @@ export default function DisparoPanel() {
         templateId: templateSelecionado,
         antiBlock,
         protocolo,
+        instanceId: instanciaSelecionada || undefined,
         intervaloMin: 3,
         intervaloMax: 12,
       })
@@ -249,6 +261,29 @@ export default function DisparoPanel() {
                       ))}
                     </select>
                   </div>
+
+                  {instances.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center justify-between">
+                        <span>Instancia WhatsApp</span>
+                        {instanciaSelecionada && instances.find(i => i._id === instanciaSelecionada)?.status !== 'conectado' && (
+                          <span className="text-xs font-normal text-amber-600">⚠ nao conectada</span>
+                        )}
+                      </label>
+                      <select
+                        value={instanciaSelecionada}
+                        onChange={e => setInstanciaSelecionada(e.target.value)}
+                        className="input-field"
+                      >
+                        <option value="">Padrao (env)</option>
+                        {instances.map(i => (
+                          <option key={i._id} value={i._id}>
+                            {i.nome} {i.phone ? `(${i.phone})` : ''} {i.padrao ? '★' : ''} {i.status === 'conectado' ? '✓' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Modelo da Mensagem</label>

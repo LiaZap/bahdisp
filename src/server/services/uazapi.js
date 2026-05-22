@@ -1,36 +1,79 @@
 import axios from 'axios'
 
+const BASE_URL = process.env.UAZAPI_URL || 'https://liaautomacoes.uazapi.com'
+
+/**
+ * Cliente axios genérico (sem token).
+ * Token é adicionado por chamada (instância ou admin).
+ */
 const uazapi = axios.create({
-  baseURL: process.env.UAZAPI_URL || 'https://liaautomacoes.uazapi.com',
+  baseURL: BASE_URL,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  }
+    'Accept': 'application/json',
+  },
 })
 
-uazapi.interceptors.request.use((config) => {
-  config.headers['token'] = process.env.UAZAPI_TOKEN
-  return config
-})
+function instanceHeaders(token) {
+  return { token: token || process.env.UAZAPI_TOKEN }
+}
 
-export async function conectarInstancia(phone) {
-  const { data } = await uazapi.post('/instance/connect', { phone })
+function adminHeaders() {
+  return { admintoken: process.env.UAZAPI_ADMIN_TOKEN }
+}
+
+// ─── Admin (gestão de instâncias) ────────────────────────────────────────
+
+export async function criarInstancia({ name, adminField01 = '', adminField02 = '' }) {
+  const { data } = await uazapi.post(
+    '/instance/create',
+    { name, adminField01, adminField02 },
+    { headers: adminHeaders() }
+  )
   return data
 }
 
-export async function enviarMensagem(numero, mensagem) {
-  const { data } = await uazapi.post('/send/text', {
-    number: numero,
-    text: mensagem
+export async function deletarInstancia(instanceToken) {
+  const { data } = await uazapi.delete('/instance/delete', {
+    headers: instanceHeaders(instanceToken),
   })
+  return data
+}
+
+// ─── Instância (usa o token da instância) ────────────────────────────────
+
+export async function conectarInstancia(phone, instanceToken) {
+  const { data } = await uazapi.post(
+    '/instance/connect',
+    { phone },
+    { headers: instanceHeaders(instanceToken) }
+  )
+  return data
+}
+
+export async function statusInstancia(instanceToken) {
+  const { data } = await uazapi.get('/instance/status', {
+    headers: instanceHeaders(instanceToken),
+  })
+  return data
+}
+
+export async function enviarMensagem(numero, mensagem, instanceToken) {
+  const { data } = await uazapi.post(
+    '/send/text',
+    { number: numero, text: mensagem },
+    { headers: instanceHeaders(instanceToken) }
+  )
   return data
 }
 
 export async function verificarConexao() {
-  const { data } = await uazapi.post('/instance/connect', {
-    phone: process.env.UAZAPI_PHONE || '5511999999999'
-  })
+  const { data } = await uazapi.post(
+    '/instance/connect',
+    { phone: process.env.UAZAPI_PHONE || '5511999999999' },
+    { headers: instanceHeaders() }
+  )
   return data
 }
 
@@ -43,8 +86,9 @@ function randomDelay(minMs, maxMs) {
  * Aceita dois formatos de entrada:
  *  - Array<{medico, texto}> — uma mensagem por destinatário (variada)
  *  - Array<medico> + mensagem única (modo legado)
+ * @param {String} instanceToken - Token da instância a usar (opcional, usa env por padrão)
  */
-export async function enviarMensagemComDelay(destinatarios, mensagemOuMin, minMsOrMax = 3000, maxMs = 12000) {
+export async function enviarMensagemComDelay(destinatarios, mensagemOuMin, minMsOrMax = 3000, maxMs = 12000, instanceToken = null) {
   // Detecta o formato: se primeiro item tem .texto, é o formato novo
   const isVariado = destinatarios.length > 0 && typeof destinatarios[0]?.texto === 'string'
 
@@ -63,7 +107,7 @@ export async function enviarMensagemComDelay(destinatarios, mensagemOuMin, minMs
   const resultados = []
   for (const { medico, texto } of lista) {
     try {
-      const resultado = await enviarMensagem(medico.whatsapp, texto)
+      const resultado = await enviarMensagem(medico.whatsapp, texto, instanceToken)
       resultados.push({ medicoId: medico._id, status: 'enviado', resultado })
     } catch (err) {
       resultados.push({ medicoId: medico._id, status: 'erro', erro: err.message })

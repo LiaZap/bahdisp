@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import {
   FiHome, FiSend, FiBriefcase, FiUsers, FiBarChart2,
-  FiSettings, FiLogOut, FiChevronLeft, FiMenu, FiClock, FiFileText
+  FiSettings, FiLogOut, FiChevronLeft, FiMenu, FiClock, FiFileText, FiSmartphone
 } from 'react-icons/fi'
 import { useState } from 'react'
 import BahLogo from '../BahLogo'
@@ -14,6 +14,7 @@ const menuItems = [
   { to: '/vagas', icon: FiBriefcase, label: 'Vagas' },
   { to: '/medicos', icon: FiUsers, label: 'Médicos' },
   { to: '/templates', icon: FiFileText, label: 'Templates' },
+  { to: '/instancias', icon: FiSmartphone, label: 'Instâncias' },
   { to: '/relatorios', icon: FiBarChart2, label: 'Relatórios' },
   { to: '/configuracoes', icon: FiSettings, label: 'Configurações' },
 ]

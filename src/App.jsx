@@ -12,6 +12,7 @@ import Relatorios from './components/Relatorios/Relatorios'
 import Configuracoes from './components/Configuracoes/Configuracoes'
 import HistoricoPanel from './components/Historico/HistoricoPanel'
 import TemplatesPanel from './components/Templates/TemplatesPanel'
+import InstanciasPanel from './components/Instancias/InstanciasPanel'
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -45,6 +46,7 @@ export default function App() {
             <Route path="/medicos" element={<MedicoList />} />
             <Route path="/historico" element={<HistoricoPanel />} />
             <Route path="/templates" element={<TemplatesPanel />} />
+            <Route path="/instancias" element={<InstanciasPanel />} />
             <Route path="/relatorios" element={<Relatorios />} />
             <Route path="/configuracoes" element={<Configuracoes />} />
           </Route>

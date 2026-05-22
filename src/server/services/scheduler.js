@@ -2,6 +2,7 @@ import Agendamento from '../models/Agendamento.js'
 import Vaga from '../models/Vaga.js'
 import Medico from '../models/Medico.js'
 import Disparo from '../models/Disparo.js'
+import Instance from '../models/Instance.js'
 import { enviarMensagemComDelay } from './uazapi.js'
 import { gerarMensagem, variarCustom } from '../../utils/messageVariation.js'
 import { getQuietHours, isQuietNow } from '../utils/quietHours.js'
@@ -45,7 +46,16 @@ async function processAgendamento(ag) {
     }))
   )
 
-  const resultados = await enviarMensagemComDelay(mensagensPorMedico, 3000, 12000)
+  let instanceToken = null
+  if (ag.instanceId) {
+    const inst = await Instance.findById(ag.instanceId)
+    if (inst) instanceToken = inst.token
+  } else {
+    const padrao = await Instance.findOne({ padrao: true, ativo: true })
+    if (padrao) instanceToken = padrao.token
+  }
+
+  const resultados = await enviarMensagemComDelay(mensagensPorMedico, 3000, 12000, instanceToken)
 
   for (const r of resultados) {
     await Disparo.findOneAndUpdate(

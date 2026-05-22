@@ -14,6 +14,7 @@ import templateRoutes from './routes/templates.js'
 import agendamentoRoutes from './routes/agendamentos.js'
 import settingsRoutes from './routes/settings.js'
 import webhookRoutes from './routes/webhooks.js'
+import instanceRoutes from './routes/instances.js'
 import { startScheduler } from './services/scheduler.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -76,6 +77,7 @@ app.use('/api/templates', templateRoutes)
 app.use('/api/agendamentos', agendamentoRoutes)
 app.use('/api/settings', settingsRoutes)
 app.use('/api/webhooks', webhookRoutes)
+app.use('/api/instances', instanceRoutes)
 
 // Em produção, serve o frontend buildado (dist/) do mesmo Express
 if (process.env.NODE_ENV === 'production') {
@@ -91,9 +93,8 @@ if (!process.env.JWT_SECRET) {
   process.exit(1)
 }
 
-if (!process.env.UAZAPI_TOKEN) {
-  console.error('FATAL: UAZAPI_TOKEN não definido no .env')
-  process.exit(1)
+if (!process.env.UAZAPI_TOKEN && !process.env.UAZAPI_ADMIN_TOKEN) {
+  console.warn('AVISO: UAZAPI_TOKEN e UAZAPI_ADMIN_TOKEN não definidos. Configure ao menos um para envio de mensagens.')
 }
 
 async function start() {

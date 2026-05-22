@@ -2,6 +2,7 @@ import { Router } from 'express'
 import Disparo from '../models/Disparo.js'
 import Vaga from '../models/Vaga.js'
 import Medico from '../models/Medico.js'
+import Instance from '../models/Instance.js'
 import auth from '../middleware/auth.js'
 import { enviarMensagemComDelay } from '../services/uazapi.js'
 import { gerarMensagem as gerarMensagemVariada, variarCustom } from '../../utils/messageVariation.js'
@@ -32,7 +33,7 @@ router.post('/enviar', auth, async (req, res) => {
   try {
     const {
       vagaId, medicoIds, mensagem, mensagemCustom,
-      templateId = 1, antiBlock = true, protocolo,
+      templateId = 1, antiBlock = true, protocolo, instanceId,
     } = req.body
 
     if (!vagaId || !medicoIds?.length || !mensagem) {
@@ -75,9 +76,19 @@ router.post('/enviar', auth, async (req, res) => {
       }))
     )
 
+    // Resolve qual instância usar (escolhida, padrão, ou env)
+    let instanceToken = null
+    let instanceUsada = null
+    if (instanceId) {
+      instanceUsada = await Instance.findById(instanceId)
+    } else {
+      instanceUsada = await Instance.findOne({ padrao: true, ativo: true })
+    }
+    if (instanceUsada) instanceToken = instanceUsada.token
+
     const minDelay = (Number(req.body.intervaloMin) || 3) * 1000
     const maxDelay = (Number(req.body.intervaloMax) || 12) * 1000
-    const resultados = await enviarMensagemComDelay(mensagensPorMedico, minDelay, maxDelay)
+    const resultados = await enviarMensagemComDelay(mensagensPorMedico, minDelay, maxDelay, instanceToken)
 
     for (const resultado of resultados) {
       await Disparo.findOneAndUpdate(
@@ -98,6 +109,7 @@ router.post('/enviar', auth, async (req, res) => {
       enviados: resultados.filter(r => r.status === 'enviado').length,
       erros: resultados.filter(r => r.status === 'erro').length,
       variado: antiBlock,
+      instancia: instanceUsada?.nome || 'padrão (env)',
     })
   } catch (err) {
     console.error('Erro ao enviar disparos:', err)

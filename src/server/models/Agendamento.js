@@ -3,6 +3,7 @@ import mongoose from 'mongoose'
 const agendamentoSchema = new mongoose.Schema({
   vaga: { type: mongoose.Schema.Types.ObjectId, ref: 'Vaga', required: true },
   medicoIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Medico' }],
+  instanceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Instance' },
   templateId: { type: Number, default: 1 },
   mensagemCustom: { type: String, default: '' },
   antiBlock: { type: Boolean, default: true },

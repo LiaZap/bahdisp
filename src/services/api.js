@@ -64,4 +64,13 @@ export const settingsApi = {
   saveQuietHours: (data) => api.put('/settings/quiet-hours', data),
 }
 
+export const instancesApi = {
+  list: () => api.get('/instances'),
+  create: (data) => api.post('/instances', data),
+  connect: (id, phone) => api.post(`/instances/${id}/connect`, { phone }),
+  status: (id) => api.get(`/instances/${id}/status`),
+  setDefault: (id) => api.post(`/instances/${id}/default`),
+  delete: (id) => api.delete(`/instances/${id}`),
+}
+
 export default api

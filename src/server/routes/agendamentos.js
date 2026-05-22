@@ -18,13 +18,14 @@ router.get('/', auth, async (req, res) => {
 
 router.post('/', auth, async (req, res) => {
   try {
-    const { vagaId, medicoIds, templateId, mensagemCustom, antiBlock, agendadoPara } = req.body
+    const { vagaId, medicoIds, templateId, mensagemCustom, antiBlock, agendadoPara, instanceId } = req.body
     if (!vagaId || !medicoIds?.length || !agendadoPara) {
       return res.status(400).json({ message: 'Dados incompletos' })
     }
     const ag = await Agendamento.create({
       vaga: vagaId,
       medicoIds,
+      instanceId: instanceId || undefined,
       templateId: Number(templateId) || 1,
       mensagemCustom: mensagemCustom || '',
       antiBlock: antiBlock !== false,
