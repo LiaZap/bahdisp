@@ -1,0 +1,67 @@
+import axios from 'axios'
+
+const api = axios.create({
+  baseURL: '/api',
+  headers: { 'Content-Type': 'application/json' }
+})
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token')
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      window.location.href = '/login'
+    }
+    return Promise.reject(error)
+  }
+)
+
+export const vagasApi = {
+  list: () => api.get('/vagas'),
+  create: (data) => api.post('/vagas', data),
+  update: (id, data) => api.put(`/vagas/${id}`, data),
+  delete: (id) => api.delete(`/vagas/${id}`),
+}
+
+export const medicosApi = {
+  list: (params) => api.get('/medicos', { params }),
+  tags: () => api.get('/medicos/tags'),
+  create: (data) => api.post('/medicos', data),
+  update: (id, data) => api.put(`/medicos/${id}`, data),
+  delete: (id) => api.delete(`/medicos/${id}`),
+}
+
+export const disparosApi = {
+  list: (params) => api.get('/disparos', { params }),
+  enviar: (data) => api.post('/disparos/enviar', data),
+  stats: () => api.get('/disparos/stats'),
+  historico: () => api.get('/disparos/historico/protocolos'),
+  exportCsvUrl: (dias = 30) => `/api/disparos/export.csv?dias=${dias}`,
+}
+
+export const templatesApi = {
+  list: () => api.get('/templates'),
+  create: (data) => api.post('/templates', data),
+  update: (id, data) => api.put(`/templates/${id}`, data),
+  delete: (id) => api.delete(`/templates/${id}`),
+}
+
+export const agendamentosApi = {
+  list: () => api.get('/agendamentos'),
+  create: (data) => api.post('/agendamentos', data),
+  cancel: (id) => api.delete(`/agendamentos/${id}`),
+}
+
+export const settingsApi = {
+  quietHours: () => api.get('/settings/quiet-hours'),
+  saveQuietHours: (data) => api.put('/settings/quiet-hours', data),
+}
+
+export default api

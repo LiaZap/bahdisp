@@ -1,0 +1,33 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      MONGODB_URI: mongodb://mongo:27017/liameddis
+      JWT_SECRET: ${JWT_SECRET}
+      UAZAPI_URL: ${UAZAPI_URL:-https://liaautomacoes.uazapi.com}
+      UAZAPI_TOKEN: ${UAZAPI_TOKEN}
+      UAZAPI_PHONE: ${UAZAPI_PHONE:-5511999999999}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  mongo-data:
