@@ -8,14 +8,8 @@ import { useState } from 'react'
 import BahLogo from '../BahLogo'
 
 const menuItems = [
-  { to: '/', icon: FiHome, label: 'Dashboard' },
   { to: '/disparos', icon: FiSend, label: 'Disparos' },
-  { to: '/historico', icon: FiClock, label: 'Histórico' },
-  { to: '/vagas', icon: FiBriefcase, label: 'Vagas' },
-  { to: '/medicos', icon: FiUsers, label: 'Médicos' },
-  { to: '/templates', icon: FiFileText, label: 'Templates' },
   { to: '/instancias', icon: FiSmartphone, label: 'Instâncias' },
-  { to: '/relatorios', icon: FiBarChart2, label: 'Relatórios' },
   { to: '/configuracoes', icon: FiSettings, label: 'Configurações' },
 ]
 

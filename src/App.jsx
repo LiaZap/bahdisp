@@ -40,17 +40,19 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
           <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<Navigate to="/disparos" replace />} />
             <Route path="/disparos" element={<DisparoPanel />} />
+            <Route path="/instancias" element={<InstanciasPanel />} />
+            <Route path="/configuracoes" element={<Configuracoes />} />
+            {/* Rotas ocultas (acessíveis por URL direta, para uso futuro) */}
             <Route path="/vagas" element={<VagaList />} />
             <Route path="/medicos" element={<MedicoList />} />
             <Route path="/historico" element={<HistoricoPanel />} />
             <Route path="/templates" element={<TemplatesPanel />} />
-            <Route path="/instancias" element={<InstanciasPanel />} />
             <Route path="/relatorios" element={<Relatorios />} />
-            <Route path="/configuracoes" element={<Configuracoes />} />
+            <Route path="/dashboard" element={<Dashboard />} />
           </Route>
-          <Route path="*" element={<Navigate to="/" />} />
+          <Route path="*" element={<Navigate to="/disparos" />} />
         </Routes>
       </BrowserRouter>
       </ErrorBoundary>

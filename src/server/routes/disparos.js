@@ -29,6 +29,75 @@ router.get('/', auth, async (req, res) => {
   }
 })
 
+// Disparo simples: somente numeros + mensagem (sem vaga / medicos cadastrados)
+router.post('/simples', auth, async (req, res) => {
+  try {
+    const { phones, mensagem, antiBlock = true, instanceId } = req.body
+
+    if (!Array.isArray(phones) || phones.length === 0 || !mensagem?.trim()) {
+      return res.status(400).json({ message: 'Numeros e mensagem sao obrigatorios' })
+    }
+
+    // Normaliza numeros: so digitos
+    const normalizados = phones
+      .map(p => String(p).replace(/\D/g, ''))
+      .filter(p => p.length >= 10)
+
+    if (normalizados.length === 0) {
+      return res.status(400).json({ message: 'Nenhum numero valido' })
+    }
+
+    const quiet = await getQuietHours()
+    if (isQuietNow(quiet) && !req.body.forcar) {
+      return res.status(409).json({
+        message: `Horario de silencio ativo (${quiet.inicio}h-${quiet.fim}h). Disparo bloqueado.`,
+        quietHours: quiet,
+        code: 'QUIET_HOURS',
+      })
+    }
+
+    // Resolve instancia
+    let instanceToken = null
+    let instanceUsada = null
+    if (instanceId) {
+      instanceUsada = await Instance.findById(instanceId)
+    } else {
+      instanceUsada = await Instance.findOne({ padrao: true, ativo: true })
+    }
+    if (instanceUsada) instanceToken = instanceUsada.token
+
+    // Monta payload com variacao por destinatario (anti-bloqueio em mensagem livre)
+    const lista = normalizados.map(numero => ({
+      medico: { _id: numero, whatsapp: numero },
+      texto: antiBlock ? variarCustom(mensagem, numero) : mensagem,
+    }))
+
+    const protocolo = `LMD-${Math.floor(Math.random() * 9000 + 1000)}`
+
+    // Persiste como Disparo (sem vaga/medico cadastrado -> guarda numero no campo mensagem por enquanto)
+    const docsParaCriar = lista.map(({ medico, texto }) => ({
+      protocolo,
+      mensagem: texto,
+      numero: medico.whatsapp,
+      enviadoPor: req.user._id,
+    }))
+
+    const resultados = await enviarMensagemComDelay(lista, 3000, 12000, instanceToken)
+
+    res.json({
+      protocolo,
+      total: normalizados.length,
+      enviados: resultados.filter(r => r.status === 'enviado').length,
+      erros: resultados.filter(r => r.status === 'erro').length,
+      detalhes: resultados,
+      instancia: instanceUsada?.nome || 'padrão (env)',
+    })
+  } catch (err) {
+    console.error('Erro disparo simples:', err)
+    res.status(500).json({ message: 'Erro ao enviar disparos' })
+  }
+})
+
 router.post('/enviar', auth, async (req, res) => {
   try {
     const {
