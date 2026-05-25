@@ -11,6 +11,7 @@
     "start": "node src/server/server.js",
     "seed": "node src/server/seed.js",
     "create-user": "node src/server/createUser.js",
+    "update-user": "node src/server/updateUser.js",
     "dev:full": "concurrently \"npm run dev\" \"npm run server\""
   },
   "dependencies": {

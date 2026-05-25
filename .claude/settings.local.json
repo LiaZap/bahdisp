@@ -39,7 +39,8 @@
       "Bash(git commit -m 'ui: remove premium modal and upgrade card, keep only lock icon *)",
       "Bash(git commit -m 'fix\\(instancias\\): webhook config + QR code reliability *)",
       "Bash(git commit -m 'chore: remove stray file *)",
-      "Bash(git commit -m 'refactor\\(configuracoes\\): remove WhatsApp connection section *)"
+      "Bash(git commit -m 'refactor\\(configuracoes\\): remove WhatsApp connection section *)",
+      "Bash(git commit -m 'feat: CLI script to update user \\(updateUser.js\\) *)"
     ]
   }
 }
