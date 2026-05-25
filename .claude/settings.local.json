@@ -33,7 +33,8 @@
       "Bash(awk '$5 == 0 {print $NF}')",
       "Bash(rm -f 'r.status' 'setTimeout\\(r' '{,-')",
       "Bash(git commit -m 'Remove stray empty files *)",
-      "Bash(git commit -m 'chore: remove stray empty file *)"
+      "Bash(git commit -m 'chore: remove stray empty file *)",
+      "Bash(git commit -m 'feat\\(sidebar\\): premium tier with blurred locked features *)"
     ]
   }
 }
