@@ -44,19 +44,58 @@ export async function deletarInstancia(instanceToken) {
 // ─── Instância (usa o token da instância) ────────────────────────────────
 
 export async function conectarInstancia(phone, instanceToken) {
-  const { data } = await uazapi.post(
-    '/instance/connect',
-    { phone },
-    { headers: instanceHeaders(instanceToken) }
-  )
-  return data
+  const body = phone ? { phone } : {}
+  try {
+    const { data } = await uazapi.post(
+      '/instance/connect',
+      body,
+      { headers: instanceHeaders(instanceToken) }
+    )
+    return data
+  } catch (err) {
+    const detail = err.response?.data || err.message
+    throw new Error(`Uazapi /instance/connect falhou: ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`)
+  }
 }
 
 export async function statusInstancia(instanceToken) {
-  const { data } = await uazapi.get('/instance/status', {
-    headers: instanceHeaders(instanceToken),
-  })
-  return data
+  try {
+    const { data } = await uazapi.get('/instance/status', {
+      headers: instanceHeaders(instanceToken),
+    })
+    return data
+  } catch (err) {
+    const detail = err.response?.data || err.message
+    throw new Error(`Uazapi /instance/status falhou: ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`)
+  }
+}
+
+/**
+ * Configura o webhook de uma instância.
+ * Uazapi: POST /webhook com { url, events: [], excludeMessages, addUrlEvents }
+ */
+export async function configurarWebhook(instanceToken, { url, events = [] } = {}) {
+  const body = {
+    url,
+    enabled: !!url,
+    events: events.length > 0 ? events : [
+      'messages',
+      'messages_update',
+      'connection',
+      'qrcode',
+    ],
+  }
+  try {
+    const { data } = await uazapi.post(
+      '/webhook',
+      body,
+      { headers: instanceHeaders(instanceToken) }
+    )
+    return data
+  } catch (err) {
+    const detail = err.response?.data || err.message
+    throw new Error(`Uazapi /webhook falhou: ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`)
+  }
 }
 
 export async function enviarMensagem(numero, mensagem, instanceToken) {

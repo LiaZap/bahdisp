@@ -71,6 +71,7 @@ export const instancesApi = {
   connect: (id, phone) => api.post(`/instances/${id}/connect`, { phone }),
   status: (id) => api.get(`/instances/${id}/status`),
   setDefault: (id) => api.post(`/instances/${id}/default`),
+  setWebhook: (id, url) => api.post(`/instances/${id}/webhook`, { url }),
   delete: (id) => api.delete(`/instances/${id}`),
 }
 

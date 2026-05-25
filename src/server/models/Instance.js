@@ -16,6 +16,8 @@ const instanceSchema = new mongoose.Schema({
   },
   // Marca a instância padrão (usada quando o usuário não especifica)
   padrao: { type: Boolean, default: false },
+  // URL do webhook para receber eventos (delivery, leitura, respostas)
+  webhookUrl: { type: String, default: '' },
   // Metadados livres
   adminField01: { type: String, default: '' },
   adminField02: { type: String, default: '' },
