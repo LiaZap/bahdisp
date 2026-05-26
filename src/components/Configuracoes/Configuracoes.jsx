@@ -24,7 +24,7 @@ export default function Configuracoes() {
     setSavingQuiet(true)
     try {
       await settingsApi.saveQuietHours(quietHours)
-      toast.success('Horario de silencio salvo!')
+      toast.success('Horário de silêncio salvo!')
     } catch {
       toast.error('Erro ao salvar (backend offline?)')
     } finally {

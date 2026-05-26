@@ -28,7 +28,6 @@ export default function InstanciasPanel() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const pollRef = useRef(null)
 
-  // URL padrao do webhook (preenche automatico no form)
   const defaultWebhookUrl = `${window.location.origin}/api/webhooks/uazapi`
 
   async function fetchInstances() {
@@ -43,8 +42,6 @@ export default function InstanciasPanel() {
   }
 
   useEffect(() => { fetchInstances() }, [])
-
-  // Cleanup poll on unmount
   useEffect(() => () => clearInterval(pollRef.current), [])
 
   function openCreateForm() {
@@ -59,11 +56,11 @@ export default function InstanciasPanel() {
 
   async function handleCreate(e) {
     e.preventDefault()
-    if (!form.nome) return toast.error('Nome obrigatorio')
+    if (!form.nome) return toast.error('Nome é obrigatório')
     setCreating(true)
     try {
       await instancesApi.create(form)
-      toast.success('Instancia criada!')
+      toast.success('Instância criada!')
       setShowForm(false)
       fetchInstances()
     } catch (err) {
@@ -84,7 +81,7 @@ export default function InstanciasPanel() {
       const qrcode = data.qrcode || data.base64 || data.image || data?.instance?.qrcode
 
       if (data.connected || data.status === 'CONNECTED') {
-        toast.success('Instancia ja conectada!')
+        toast.success('Instância já está conectada!')
         setQrModal(null)
         fetchInstances()
         return
@@ -92,7 +89,7 @@ export default function InstanciasPanel() {
 
       if (qrcode) {
         setQrModal(prev => ({ ...prev, qrcode }))
-        // Inicia polling para detectar quando conectar
+        // Polling para detectar conexão
         pollRef.current = setInterval(async () => {
           try {
             const { data: status } = await instancesApi.status(instance._id)
@@ -105,7 +102,7 @@ export default function InstanciasPanel() {
           } catch { /* ignora erros de polling */ }
         }, 3000)
       } else {
-        setQrError('A Uazapi nao retornou QR Code. Verifique o painel da Uazapi diretamente, ou tente recriar a instancia.')
+        setQrError('A Uazapi não retornou QR Code. Verifique o painel da Uazapi diretamente ou tente recriar a instância.')
         console.log('Uazapi response:', data)
       }
     } catch (err) {
@@ -135,10 +132,10 @@ export default function InstanciasPanel() {
   async function setAsDefault(instance) {
     try {
       await instancesApi.setDefault(instance._id)
-      toast.success(`"${instance.nome}" definida como padrao`)
+      toast.success(`"${instance.nome}" definida como padrão`)
       fetchInstances()
     } catch {
-      toast.error('Erro ao definir padrao')
+      toast.error('Erro ao definir padrão')
     }
   }
 
@@ -151,7 +148,7 @@ export default function InstanciasPanel() {
   }
 
   async function saveWebhook() {
-    if (!webhookModal?.url) return toast.error('URL obrigatoria')
+    if (!webhookModal?.url) return toast.error('URL é obrigatória')
     setWebhookModal(prev => ({ ...prev, saving: true }))
     try {
       await instancesApi.setWebhook(webhookModal.instance._id, webhookModal.url)
@@ -168,7 +165,7 @@ export default function InstanciasPanel() {
     if (!deleteTarget) return
     try {
       await instancesApi.delete(deleteTarget._id)
-      toast.success('Instancia removida')
+      toast.success('Instância removida')
       fetchInstances()
     } catch {
       toast.error('Erro ao remover')
@@ -183,15 +180,15 @@ export default function InstanciasPanel() {
 
   return (
     <div>
-      <Header title="Instancias WhatsApp" />
+      <Header title="Instâncias WhatsApp" />
       <div className="p-6 space-y-5">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-bold text-gray-900">Gerenciar numeros conectados</h3>
-            <p className="text-sm text-gray-500">Adicione multiplas instancias para usar varios numeros</p>
+            <h3 className="text-lg font-bold text-gray-900">Gerenciar números conectados</h3>
+            <p className="text-sm text-gray-500">Adicione múltiplas instâncias para usar vários números</p>
           </div>
           <button onClick={openCreateForm} className="btn-primary flex items-center gap-2">
-            <FiPlus className="w-4 h-4" /> Nova Instancia
+            <FiPlus className="w-4 h-4" /> Nova Instância
           </button>
         </div>
 
@@ -204,12 +201,12 @@ export default function InstanciasPanel() {
         {!loading && instances.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16">
             <FiSmartphone className="w-12 h-12 text-gray-300 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-600 mb-1">Nenhuma instancia criada</h3>
+            <h3 className="text-lg font-semibold text-gray-600 mb-1">Nenhuma instância criada</h3>
             <p className="text-sm text-gray-400 mb-6 text-center max-w-sm">
-              Crie sua primeira instancia para conectar um numero do WhatsApp
+              Crie sua primeira instância para conectar um número do WhatsApp
             </p>
             <button onClick={openCreateForm} className="btn-primary flex items-center gap-2">
-              <FiPlus className="w-4 h-4" /> Criar primeira instancia
+              <FiPlus className="w-4 h-4" /> Criar primeira instância
             </button>
           </div>
         )}
@@ -223,7 +220,7 @@ export default function InstanciasPanel() {
                 <div key={inst._id} className={`card relative ${inst.padrao ? 'border-2 border-primary-400' : ''}`}>
                   {inst.padrao && (
                     <div className="absolute -top-2 -right-2 bg-primary-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <FiStar className="w-3 h-3 fill-white" /> PADRAO
+                      <FiStar className="w-3 h-3 fill-white" /> PADRÃO
                     </div>
                   )}
 
@@ -234,7 +231,7 @@ export default function InstanciasPanel() {
                     <div className="flex-1 min-w-0">
                       <h4 className="text-base font-bold text-gray-900 truncate">{inst.nome}</h4>
                       <p className="text-xs text-gray-500 truncate">
-                        {inst.phone || 'Sem numero conectado'}
+                        {inst.phone || 'Sem número conectado'}
                       </p>
                     </div>
                   </div>
@@ -264,6 +261,7 @@ export default function InstanciasPanel() {
                     <button
                       onClick={() => checkStatus(inst)}
                       className="text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 px-2.5 py-1.5 rounded-lg flex items-center gap-1"
+                      title="Verificar status"
                     >
                       <FiRefreshCw className="w-3.5 h-3.5" />
                     </button>
@@ -277,6 +275,7 @@ export default function InstanciasPanel() {
                       <button
                         onClick={() => setAsDefault(inst)}
                         className="text-xs font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 border border-primary-200 px-2.5 py-1.5 rounded-lg flex items-center gap-1"
+                        title="Definir como padrão"
                       >
                         <FiStar className="w-3.5 h-3.5" />
                       </button>
@@ -284,6 +283,7 @@ export default function InstanciasPanel() {
                     <button
                       onClick={() => setDeleteTarget(inst)}
                       className="text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 px-2.5 py-1.5 rounded-lg flex items-center gap-1 ml-auto"
+                      title="Excluir"
                     >
                       <FiTrash2 className="w-3.5 h-3.5" />
                     </button>
@@ -299,14 +299,14 @@ export default function InstanciasPanel() {
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between p-6 border-b border-gray-100 sticky top-0 bg-white">
-                <h3 className="text-lg font-bold text-gray-900">Nova Instancia</h3>
+                <h3 className="text-lg font-bold text-gray-900">Nova Instância</h3>
                 <button onClick={() => setShowForm(false)} className="p-2 hover:bg-gray-100 rounded-lg">
                   <FiX className="w-5 h-5 text-gray-500" />
                 </button>
               </div>
               <form onSubmit={handleCreate} className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nome da instancia *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nome da instância *</label>
                   <input
                     value={form.nome}
                     onChange={e => setForm({ ...form, nome: e.target.value })}
@@ -314,7 +314,7 @@ export default function InstanciasPanel() {
                     placeholder="Ex: comercial-sp"
                     required
                   />
-                  <p className="text-xs text-gray-400 mt-1">Identificador unico (sem espacos)</p>
+                  <p className="text-xs text-gray-400 mt-1">Identificador único (sem espaços)</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
@@ -327,7 +327,7 @@ export default function InstanciasPanel() {
                     placeholder={defaultWebhookUrl}
                   />
                   <p className="text-xs text-gray-400 mt-1">
-                    Recebe eventos de entrega, leitura e respostas. Deixe o padrao para usar este servidor.
+                    Recebe eventos de entrega, leitura e respostas. Deixe o padrão para usar este servidor.
                   </p>
                 </div>
                 <div>
@@ -336,7 +336,7 @@ export default function InstanciasPanel() {
                     value={form.adminField01}
                     onChange={e => setForm({ ...form, adminField01: e.target.value })}
                     className="input-field"
-                    placeholder="Ex: Filial Sao Paulo"
+                    placeholder="Ex: Filial São Paulo"
                   />
                 </div>
                 <div>
@@ -345,11 +345,11 @@ export default function InstanciasPanel() {
                     value={form.adminField02}
                     onChange={e => setForm({ ...form, adminField02: e.target.value })}
                     className="input-field"
-                    placeholder="Ex: Responsavel: Joao"
+                    placeholder="Ex: Responsável: João"
                   />
                 </div>
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
-                  <strong>Apos criar</strong>, clique em "Conectar" no card da instancia para escanear o QR Code e parear o numero.
+                  <strong>Após criar</strong>, clique em "Conectar" no card da instância para escanear o QR Code e parear o número.
                 </div>
                 <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
                   <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">Cancelar</button>
@@ -376,7 +376,7 @@ export default function InstanciasPanel() {
               </div>
               <div className="p-6 flex flex-col items-center gap-4">
                 <div className="w-full">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Numero do WhatsApp (opcional)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Número do WhatsApp (opcional)</label>
                   <input
                     value={qrModal.phone}
                     onChange={e => setQrModal(p => ({ ...p, phone: e.target.value }))}
@@ -402,7 +402,7 @@ export default function InstanciasPanel() {
                     </div>
                     <div className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2 flex items-center gap-2">
                       <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                      Aguardando voce escanear...
+                      Aguardando você escanear...
                     </div>
                   </>
                 )}
@@ -418,7 +418,7 @@ export default function InstanciasPanel() {
                   <div className="w-64 h-64 bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-3 px-4 text-center">
                     <FiSmartphone className="w-10 h-10 text-gray-300" />
                     <p className="text-sm text-gray-400">
-                      Clique em "Gerar QR" para conectar este numero
+                      Clique em "Gerar QR Code" para conectar este número
                     </p>
                   </div>
                 )}
@@ -456,7 +456,7 @@ export default function InstanciasPanel() {
               </div>
               <div className="p-6 space-y-4">
                 <p className="text-sm text-gray-600">
-                  Instancia: <strong>{webhookModal.instance.nome}</strong>
+                  Instância: <strong>{webhookModal.instance.nome}</strong>
                 </p>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">URL do webhook</label>
@@ -489,8 +489,8 @@ export default function InstanciasPanel() {
                     <li>Entrega de mensagens</li>
                     <li>Leitura (visto)</li>
                     <li>Respostas dos contatos</li>
-                    <li>Mudancas de conexao (online/offline)</li>
-                    <li>Atualizacoes do QR Code</li>
+                    <li>Mudanças de conexão (online/offline)</li>
+                    <li>Atualizações do QR Code</li>
                   </ul>
                 </div>
               </div>
@@ -510,8 +510,8 @@ export default function InstanciasPanel() {
 
         <ConfirmModal
           open={!!deleteTarget}
-          title="Remover instancia"
-          message={`Remover "${deleteTarget?.nome}"? Esta acao desconecta o numero da Uazapi.`}
+          title="Remover instância"
+          message={`Remover "${deleteTarget?.nome}"? Esta ação desconecta o número da Uazapi.`}
           onConfirm={handleDelete}
           onCancel={() => setDeleteTarget(null)}
         />

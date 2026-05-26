@@ -4,8 +4,16 @@ import WhatsAppPreview from './WhatsAppPreview'
 import toast from 'react-hot-toast'
 import { disparosApi, instancesApi } from '../../services/api'
 import {
-  FiSend, FiPhone, FiMessageSquare, FiShield, FiSmartphone, FiAlertCircle
+  FiSend, FiPhone, FiMessageSquare, FiShield, FiSmartphone,
+  FiAlertCircle, FiCheckCircle, FiXCircle, FiClock
 } from 'react-icons/fi'
+
+const statusIcons = {
+  conectado: { icon: FiCheckCircle, color: 'text-green-600', bg: 'bg-green-100' },
+  aguardando: { icon: FiClock, color: 'text-yellow-600', bg: 'bg-yellow-100' },
+  desconectado: { icon: FiXCircle, color: 'text-red-600', bg: 'bg-red-100' },
+  pendente: { icon: FiAlertCircle, color: 'text-gray-500', bg: 'bg-gray-100' },
+}
 
 export default function DisparoPanel() {
   const [numeros, setNumeros] = useState('')
@@ -24,25 +32,31 @@ export default function DisparoPanel() {
         const padrao = list.find(i => i.padrao && i.status === 'conectado')
           || list.find(i => i.padrao)
           || list.find(i => i.status === 'conectado')
+          || list[0]
         if (padrao) setInstanciaSelecionada(padrao._id)
       })
-      .catch(() => { /* ok sem instancias */ })
+      .catch(() => { /* sem instâncias é ok */ })
   }, [])
 
-  // Parse numeros: aceita virgula, espaço, ponto e virgula, ou quebra de linha
+  // Parse números: aceita vírgula, espaço, ponto-e-vírgula ou quebra de linha
   const numerosArray = numeros
     .split(/[\n,;]+/)
     .map(n => n.trim())
     .filter(Boolean)
 
   const numerosValidos = numerosArray.filter(n => n.replace(/\D/g, '').length >= 10)
+  const instanciaAtual = instances.find(i => i._id === instanciaSelecionada)
 
   async function handleDisparar() {
     if (numerosValidos.length === 0) {
-      return toast.error('Adicione ao menos um numero valido')
+      return toast.error('Adicione ao menos um número válido')
     }
     if (!mensagem.trim()) {
       return toast.error('Escreva uma mensagem')
+    }
+    if (instanciaAtual && instanciaAtual.status !== 'conectado') {
+      const ok = window.confirm(`A instância "${instanciaAtual.nome}" não está conectada. Disparar mesmo assim?`)
+      if (!ok) return
     }
 
     setEnviando(true)
@@ -57,14 +71,13 @@ export default function DisparoPanel() {
       setResultado(data)
       toast.success(`${data.enviados} de ${data.total} enviado(s)!`)
       if (data.enviados === data.total) {
-        // sucesso completo: limpa
         setNumeros('')
         setMensagem('')
       }
     } catch (err) {
       if (err.response?.status === 409 && err.response?.data?.code === 'QUIET_HOURS') {
         const q = err.response.data.quietHours
-        toast.error(`Horario de silencio ativo (${q.inicio}h-${q.fim}h)`, { duration: 5000 })
+        toast.error(`Horário de silêncio ativo (${q.inicio}h–${q.fim}h)`, { duration: 5000 })
       } else {
         toast.error(err.response?.data?.message || 'Erro ao disparar')
       }
@@ -82,39 +95,92 @@ export default function DisparoPanel() {
           <div className="card space-y-5">
             <div>
               <h3 className="text-lg font-bold text-gray-900">Enviar mensagem</h3>
-              <p className="text-sm text-gray-500">Cole os numeros, escreva a mensagem e dispare</p>
+              <p className="text-sm text-gray-500">Cole os números, escreva a mensagem e dispare</p>
             </div>
 
-            {/* Instancia (so aparece se houver mais de uma) */}
-            {instances.length > 0 && (
+            {/* Seletor de Instância */}
+            {instances.length > 0 ? (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                   <FiSmartphone className="w-4 h-4 text-gray-400" />
-                  Instancia WhatsApp
+                  Enviar a partir de
+                  {instanciaAtual?.status === 'conectado' && (
+                    <span className="text-xs font-normal text-green-600 ml-auto flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                      Conectado
+                    </span>
+                  )}
                 </label>
-                <select
-                  value={instanciaSelecionada}
-                  onChange={e => setInstanciaSelecionada(e.target.value)}
-                  className="input-field"
-                >
-                  <option value="">Padrao</option>
-                  {instances.map(i => (
-                    <option key={i._id} value={i._id}>
-                      {i.nome} {i.phone ? `(${i.phone})` : ''} {i.status === 'conectado' ? '✓' : '⚠'}
-                    </option>
-                  ))}
-                </select>
+                {instances.length <= 3 ? (
+                  // Visual de cards quando há poucas instâncias
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {instances.map(i => {
+                      const cfg = statusIcons[i.status] || statusIcons.pendente
+                      const Icon = cfg.icon
+                      const selecionada = instanciaSelecionada === i._id
+                      return (
+                        <button
+                          key={i._id}
+                          type="button"
+                          onClick={() => setInstanciaSelecionada(i._id)}
+                          className={`text-left p-3 rounded-xl border-2 transition-all ${
+                            selecionada
+                              ? 'border-primary-500 bg-primary-50 shadow-sm'
+                              : 'border-gray-200 bg-white hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${cfg.bg}`}>
+                              <Icon className={`w-4 h-4 ${cfg.color}`} />
+                            </div>
+                            {i.padrao && (
+                              <span className="text-[9px] font-bold bg-primary-600 text-white px-1.5 py-0.5 rounded">
+                                PADRÃO
+                              </span>
+                            )}
+                          </div>
+                          <p className={`text-sm font-semibold truncate ${selecionada ? 'text-primary-700' : 'text-gray-900'}`}>
+                            {i.nome}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate font-mono">
+                            {i.phone || 'sem número'}
+                          </p>
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  // Dropdown quando há muitas instâncias
+                  <select
+                    value={instanciaSelecionada}
+                    onChange={e => setInstanciaSelecionada(e.target.value)}
+                    className="input-field"
+                  >
+                    {instances.map(i => (
+                      <option key={i._id} value={i._id}>
+                        {i.nome} {i.phone ? `· ${i.phone}` : ''} {i.status === 'conectado' ? '✓' : '⚠'}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            ) : (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2">
+                <FiAlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-800">
+                  Nenhuma instância configurada. Vá em <strong>Instâncias</strong> para conectar um número antes de disparar.
+                </p>
               </div>
             )}
 
-            {/* Numeros */}
+            {/* Números */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-2">
                 <FiPhone className="w-4 h-4 text-gray-400" />
-                Numero(s) de WhatsApp
+                Número(s) de WhatsApp
                 {numerosValidos.length > 0 && (
                   <span className="text-xs font-normal text-green-600 ml-auto">
-                    {numerosValidos.length} valido{numerosValidos.length !== 1 ? 's' : ''}
+                    {numerosValidos.length} válido{numerosValidos.length !== 1 ? 's' : ''}
                   </span>
                 )}
               </label>
@@ -125,7 +191,7 @@ export default function DisparoPanel() {
                 placeholder={'5511999999999\n5511988888888\n5511977777777'}
               />
               <p className="text-xs text-gray-400 mt-1">
-                Um por linha, ou separados por virgula. Formato: 55 + DDD + numero (ex: 5511999999999)
+                Um por linha, ou separados por vírgula. Formato: 55 + DDD + número (ex: 5511999999999)
               </p>
             </div>
 
@@ -145,7 +211,7 @@ export default function DisparoPanel() {
                 placeholder="Escreva sua mensagem aqui..."
               />
               <p className="text-xs text-gray-400 mt-1">
-                Use *negrito*, _italico_ e emojis para formatar
+                Use *negrito*, _itálico_ e emojis para formatar
               </p>
             </div>
 
@@ -158,10 +224,10 @@ export default function DisparoPanel() {
                   <FiShield className={`w-5 h-5 ${antiBlock ? 'text-green-600' : 'text-gray-400'}`} />
                   <div>
                     <p className={`text-sm font-semibold ${antiBlock ? 'text-green-800' : 'text-gray-700'}`}>
-                      Protecao Anti-Bloqueio
+                      Proteção Anti-Bloqueio
                     </p>
                     <p className={`text-xs ${antiBlock ? 'text-green-600' : 'text-gray-500'}`}>
-                      Cada numero recebe uma variacao + delay aleatorio entre envios
+                      Cada número recebe uma variação + delay aleatório entre envios
                     </p>
                   </div>
                 </div>
@@ -178,7 +244,7 @@ export default function DisparoPanel() {
               </div>
             </div>
 
-            {/* Resultado do ultimo disparo */}
+            {/* Resultado do último disparo */}
             {resultado && (
               <div className={`border rounded-xl p-4 ${
                 resultado.erros > 0 ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'
@@ -194,7 +260,7 @@ export default function DisparoPanel() {
                     <p className={`text-xs mt-1 ${resultado.erros > 0 ? 'text-amber-700' : 'text-green-700'}`}>
                       {resultado.enviados} enviado{resultado.enviados !== 1 ? 's' : ''} •
                       {' '}{resultado.erros} erro{resultado.erros !== 1 ? 's' : ''} •
-                      {' '}Instancia: {resultado.instancia}
+                      {' '}Instância: {resultado.instancia}
                     </p>
                   </div>
                   <button
@@ -207,7 +273,7 @@ export default function DisparoPanel() {
               </div>
             )}
 
-            {/* Botao */}
+            {/* Botão */}
             <button
               onClick={handleDisparar}
               disabled={enviando || numerosValidos.length === 0 || !mensagem.trim()}
@@ -216,12 +282,12 @@ export default function DisparoPanel() {
               {enviando ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Disparando para {numerosValidos.length} numero{numerosValidos.length !== 1 ? 's' : ''}...
+                  Disparando para {numerosValidos.length} número{numerosValidos.length !== 1 ? 's' : ''}...
                 </>
               ) : (
                 <>
                   <FiSend className="w-5 h-5" />
-                  Disparar para {numerosValidos.length} numero{numerosValidos.length !== 1 ? 's' : ''}
+                  Disparar para {numerosValidos.length} número{numerosValidos.length !== 1 ? 's' : ''}
                 </>
               )}
             </button>
@@ -231,7 +297,7 @@ export default function DisparoPanel() {
           <div className="hidden xl:block">
             <div className="sticky top-24">
               <WhatsAppPreview
-                mensagem={mensagem || 'Sua mensagem aparecera aqui...'}
+                mensagem={mensagem || 'Sua mensagem aparecerá aqui...'}
                 nomeRemetente="bah!"
               />
             </div>
