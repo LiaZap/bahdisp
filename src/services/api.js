@@ -43,6 +43,7 @@ export const disparosApi = {
   enviar: (data) => api.post('/disparos/enviar', data),
   enviarSimples: (data) => api.post('/disparos/simples', data),
   statusProtocolo: (protocolo) => api.get(`/disparos/status/${protocolo}`),
+  detalhesProtocolo: (protocolo) => api.get(`/disparos/protocolo/${protocolo}`),
   stats: () => api.get('/disparos/stats'),
   historico: () => api.get('/disparos/historico/protocolos'),
   exportCsvUrl: (dias = 30) => `/api/disparos/export.csv?dias=${dias}`,

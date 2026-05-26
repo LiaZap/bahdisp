@@ -251,22 +251,51 @@ router.get('/historico/protocolos', auth, async (req, res) => {
       { $group: {
           _id: '$protocolo',
           vaga: { $first: '$vaga' },
+          instance: { $first: '$instance' },
+          primeiraMensagem: { $first: '$mensagem' },
           total: { $sum: 1 },
           enviados: { $sum: { $cond: [{ $eq: ['$status', 'enviado'] }, 1, 0] } },
+          enviando: { $sum: { $cond: [{ $eq: ['$status', 'enviando'] }, 1, 0] } },
+          pendentes: { $sum: { $cond: [{ $eq: ['$status', 'pendente'] }, 1, 0] } },
           entregues: { $sum: { $cond: [{ $eq: ['$status', 'entregue'] }, 1, 0] } },
           lidos: { $sum: { $cond: [{ $eq: ['$status', 'lido'] }, 1, 0] } },
           respondidos: { $sum: { $cond: [{ $eq: ['$status', 'respondido'] }, 1, 0] } },
           erros: { $sum: { $cond: [{ $eq: ['$status', 'erro'] }, 1, 0] } },
+          temNumeros: { $sum: { $cond: [{ $ifNull: ['$numero', false] }, 1, 0] } },
+          temVagas: { $sum: { $cond: [{ $ifNull: ['$vaga', false] }, 1, 0] } },
           ultimoEnvio: { $max: '$createdAt' },
         } },
       { $sort: { ultimoEnvio: -1 } },
       { $limit: 100 },
       { $lookup: { from: 'vagas', localField: 'vaga', foreignField: '_id', as: 'vaga' } },
       { $unwind: { path: '$vaga', preserveNullAndEmptyArrays: true } },
+      { $lookup: { from: 'instances', localField: 'instance', foreignField: '_id', as: 'instance' } },
+      { $unwind: { path: '$instance', preserveNullAndEmptyArrays: true } },
     ])
-    res.json(grupos)
-  } catch {
+    // marca tipo
+    const tipados = grupos.map(g => ({
+      ...g,
+      tipo: g.temVagas > 0 ? 'vaga' : (g.temNumeros > 0 ? 'simples' : 'desconhecido'),
+    }))
+    res.json(tipados)
+  } catch (err) {
+    console.error('Erro historico:', err)
     res.status(500).json({ message: 'Erro ao buscar histórico' })
+  }
+})
+
+// Detalhes de um protocolo: lista todos os disparos individuais
+router.get('/protocolo/:protocolo', auth, async (req, res) => {
+  try {
+    const { protocolo } = req.params
+    const disparos = await Disparo.find({ protocolo })
+      .populate('medico', 'nome crm whatsapp especialidade')
+      .populate('vaga', 'titulo local')
+      .populate('instance', 'nome')
+      .sort({ createdAt: 1 })
+    res.json(disparos)
+  } catch {
+    res.status(500).json({ message: 'Erro ao buscar detalhes do protocolo' })
   }
 })
 

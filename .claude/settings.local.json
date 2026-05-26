@@ -46,7 +46,8 @@
       "Bash(git commit -m 'feat: disparos assincronos com progresso em tempo real *)",
       "Bash(rm -f '{,' '{,+')",
       "Bash(git commit -m 'chore: remove stray empty files *)",
-      "Bash(git commit -m 'fix\\(ux\\): deixa claro que disparo e real e remove mock do preview *)"
+      "Bash(git commit -m 'fix\\(ux\\): deixa claro que disparo e real e remove mock do preview *)",
+      "Bash(git commit -m 'feat\\(historico\\): mostra disparos simples + detalhes por numero *)"
     ]
   }
 }
