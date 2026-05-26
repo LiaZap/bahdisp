@@ -43,7 +43,9 @@
       "Bash(git commit -m 'feat: CLI script to update user \\(updateUser.js\\) *)",
       "Bash(git commit -m 'fix: acentuacao e ortografia nas paginas visiveis + melhora seletor de instancia *)",
       "Bash(git commit -m 'fix\\(variacao\\): variarCustom agora gera variacoes neutras *)",
-      "Bash(git commit -m 'feat: disparos assincronos com progresso em tempo real *)"
+      "Bash(git commit -m 'feat: disparos assincronos com progresso em tempo real *)",
+      "Bash(rm -f '{,' '{,+')",
+      "Bash(git commit -m 'chore: remove stray empty files *)"
     ]
   }
 }
