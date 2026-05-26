@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Header from '../Layout/Header'
 import WhatsAppPreview from './WhatsAppPreview'
 import toast from 'react-hot-toast'
 import { disparosApi, instancesApi } from '../../services/api'
 import {
   FiSend, FiPhone, FiMessageSquare, FiShield, FiSmartphone,
-  FiAlertCircle, FiCheckCircle, FiXCircle, FiClock
+  FiAlertCircle, FiCheckCircle, FiXCircle, FiClock, FiX
 } from 'react-icons/fi'
 
 const statusIcons = {
@@ -22,7 +22,8 @@ export default function DisparoPanel() {
   const [enviando, setEnviando] = useState(false)
   const [instances, setInstances] = useState([])
   const [instanciaSelecionada, setInstanciaSelecionada] = useState('')
-  const [resultado, setResultado] = useState(null)
+  const [progresso, setProgresso] = useState(null) // { protocolo, total, enviado, erro, ...}
+  const pollRef = useRef(null)
 
   useEffect(() => {
     instancesApi.list()
@@ -35,32 +36,55 @@ export default function DisparoPanel() {
           || list[0]
         if (padrao) setInstanciaSelecionada(padrao._id)
       })
-      .catch(() => { /* sem instâncias é ok */ })
+      .catch(() => { /* ok sem instâncias */ })
   }, [])
 
-  // Parse números: aceita vírgula, espaço, ponto-e-vírgula ou quebra de linha
+  // Limpa polling ao desmontar
+  useEffect(() => () => clearInterval(pollRef.current), [])
+
   const numerosArray = numeros
     .split(/[\n,;]+/)
     .map(n => n.trim())
     .filter(Boolean)
-
   const numerosValidos = numerosArray.filter(n => n.replace(/\D/g, '').length >= 10)
   const instanciaAtual = instances.find(i => i._id === instanciaSelecionada)
 
+  function startPolling(protocolo) {
+    clearInterval(pollRef.current)
+    pollRef.current = setInterval(async () => {
+      try {
+        const { data } = await disparosApi.statusProtocolo(protocolo)
+        setProgresso(data)
+        if (data.done) {
+          clearInterval(pollRef.current)
+          setEnviando(false)
+          // Toast final
+          if (data.erro === 0) {
+            toast.success(`${data.enviado} mensagens enviadas com sucesso!`)
+            setNumeros('')
+            setMensagem('')
+          } else if (data.enviado === 0) {
+            toast.error(`Todas as ${data.erro} mensagens falharam`)
+          } else {
+            toast.success(`${data.enviado} enviadas, ${data.erro} com erro`, { icon: '⚠️' })
+          }
+        }
+      } catch {
+        /* ignora erros transientes de polling */
+      }
+    }, 1500)
+  }
+
   async function handleDisparar() {
-    if (numerosValidos.length === 0) {
-      return toast.error('Adicione ao menos um número válido')
-    }
-    if (!mensagem.trim()) {
-      return toast.error('Escreva uma mensagem')
-    }
+    if (numerosValidos.length === 0) return toast.error('Adicione ao menos um número válido')
+    if (!mensagem.trim()) return toast.error('Escreva uma mensagem')
     if (instanciaAtual && instanciaAtual.status !== 'conectado') {
       const ok = window.confirm(`A instância "${instanciaAtual.nome}" não está conectada. Disparar mesmo assim?`)
       if (!ok) return
     }
 
     setEnviando(true)
-    setResultado(null)
+    setProgresso(null)
     try {
       const { data } = await disparosApi.enviarSimples({
         phones: numerosValidos,
@@ -68,23 +92,41 @@ export default function DisparoPanel() {
         antiBlock,
         instanceId: instanciaSelecionada || undefined,
       })
-      setResultado(data)
-      toast.success(`${data.enviados} de ${data.total} enviado(s)!`)
-      if (data.enviados === data.total) {
-        setNumeros('')
-        setMensagem('')
-      }
+      // Inicia polling com o protocolo retornado
+      setProgresso({
+        protocolo: data.protocolo,
+        total: data.total,
+        instancia: data.instancia,
+        pendente: data.total,
+        enviado: 0,
+        erro: 0,
+        concluidos: 0,
+        progress: 0,
+        done: false,
+      })
+      toast.success(`Disparo iniciado: ${data.total} mensagens`)
+      startPolling(data.protocolo)
     } catch (err) {
+      setEnviando(false)
       if (err.response?.status === 409 && err.response?.data?.code === 'QUIET_HOURS') {
         const q = err.response.data.quietHours
         toast.error(`Horário de silêncio ativo (${q.inicio}h–${q.fim}h)`, { duration: 5000 })
       } else {
         toast.error(err.response?.data?.message || 'Erro ao disparar')
       }
-    } finally {
-      setEnviando(false)
     }
   }
+
+  function cancelarPolling() {
+    clearInterval(pollRef.current)
+    setEnviando(false)
+    setProgresso(null)
+  }
+
+  // Para mostrar uma barra colorida de progresso (verdes + vermelhos + cinza pendente)
+  const pctEnviado = progresso ? Math.round((progresso.enviado / progresso.total) * 100) : 0
+  const pctErro = progresso ? Math.round((progresso.erro / progresso.total) * 100) : 0
+  const pctEnviando = progresso ? Math.round((progresso.enviando / progresso.total) * 100) : 0
 
   return (
     <div>
@@ -98,7 +140,7 @@ export default function DisparoPanel() {
               <p className="text-sm text-gray-500">Cole os números, escreva a mensagem e dispare</p>
             </div>
 
-            {/* Seletor de Instância */}
+            {/* Instâncias */}
             {instances.length > 0 ? (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
@@ -112,7 +154,6 @@ export default function DisparoPanel() {
                   )}
                 </label>
                 {instances.length <= 3 ? (
-                  // Visual de cards quando há poucas instâncias
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                     {instances.map(i => {
                       const cfg = statusIcons[i.status] || statusIcons.pendente
@@ -123,7 +164,8 @@ export default function DisparoPanel() {
                           key={i._id}
                           type="button"
                           onClick={() => setInstanciaSelecionada(i._id)}
-                          className={`text-left p-3 rounded-xl border-2 transition-all ${
+                          disabled={enviando}
+                          className={`text-left p-3 rounded-xl border-2 transition-all disabled:opacity-50 ${
                             selecionada
                               ? 'border-primary-500 bg-primary-50 shadow-sm'
                               : 'border-gray-200 bg-white hover:border-gray-300'
@@ -150,11 +192,11 @@ export default function DisparoPanel() {
                     })}
                   </div>
                 ) : (
-                  // Dropdown quando há muitas instâncias
                   <select
                     value={instanciaSelecionada}
                     onChange={e => setInstanciaSelecionada(e.target.value)}
                     className="input-field"
+                    disabled={enviando}
                   >
                     {instances.map(i => (
                       <option key={i._id} value={i._id}>
@@ -189,9 +231,10 @@ export default function DisparoPanel() {
                 onChange={e => setNumeros(e.target.value)}
                 className="input-field min-h-[80px] font-mono text-sm resize-y"
                 placeholder={'5511999999999\n5511988888888\n5511977777777'}
+                disabled={enviando}
               />
               <p className="text-xs text-gray-400 mt-1">
-                Um por linha, ou separados por vírgula. Formato: 55 + DDD + número (ex: 5511999999999)
+                Um por linha, ou separados por vírgula. Formato: 55 + DDD + número
               </p>
             </div>
 
@@ -209,6 +252,7 @@ export default function DisparoPanel() {
                 onChange={e => setMensagem(e.target.value)}
                 className="input-field min-h-[160px] resize-y"
                 placeholder="Escreva sua mensagem aqui..."
+                disabled={enviando}
               />
               <p className="text-xs text-gray-400 mt-1">
                 Use *negrito*, _itálico_ e emojis para formatar
@@ -233,7 +277,8 @@ export default function DisparoPanel() {
                 </div>
                 <button
                   onClick={() => setAntiBlock(!antiBlock)}
-                  className={`w-12 h-6 rounded-full transition-all duration-300 relative flex-shrink-0 ${
+                  disabled={enviando}
+                  className={`w-12 h-6 rounded-full transition-all duration-300 relative flex-shrink-0 disabled:opacity-50 ${
                     antiBlock ? 'bg-green-500' : 'bg-gray-300'
                   }`}
                 >
@@ -244,31 +289,72 @@ export default function DisparoPanel() {
               </div>
             </div>
 
-            {/* Resultado do último disparo */}
-            {resultado && (
+            {/* Progresso ao vivo */}
+            {progresso && (
               <div className={`border rounded-xl p-4 ${
-                resultado.erros > 0 ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'
+                progresso.done
+                  ? progresso.erro > 0
+                    ? 'bg-amber-50 border-amber-200'
+                    : 'bg-green-50 border-green-200'
+                  : 'bg-blue-50 border-blue-200'
               }`}>
-                <div className="flex items-start gap-3">
-                  <FiAlertCircle className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
-                    resultado.erros > 0 ? 'text-amber-600' : 'text-green-600'
-                  }`} />
+                <div className="flex items-start gap-3 mb-3">
+                  {progresso.done ? (
+                    progresso.erro > 0
+                      ? <FiAlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                      : <FiCheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  ) : (
+                    <div className="w-5 h-5 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin flex-shrink-0 mt-0.5" />
+                  )}
                   <div className="flex-1 text-sm">
-                    <p className={`font-semibold ${resultado.erros > 0 ? 'text-amber-800' : 'text-green-800'}`}>
-                      Protocolo: <span className="font-mono">{resultado.protocolo}</span>
+                    <p className="font-semibold text-gray-900">
+                      {progresso.done
+                        ? 'Disparo concluído'
+                        : `Disparando... ${progresso.concluidos} de ${progresso.total}`}
                     </p>
-                    <p className={`text-xs mt-1 ${resultado.erros > 0 ? 'text-amber-700' : 'text-green-700'}`}>
-                      {resultado.enviados} enviado{resultado.enviados !== 1 ? 's' : ''} •
-                      {' '}{resultado.erros} erro{resultado.erros !== 1 ? 's' : ''} •
-                      {' '}Instância: {resultado.instancia}
+                    <p className="text-xs text-gray-500 mt-0.5 font-mono">
+                      {progresso.protocolo}
                     </p>
                   </div>
                   <button
-                    onClick={() => setResultado(null)}
-                    className="text-gray-400 hover:text-gray-600 text-xs"
+                    onClick={cancelarPolling}
+                    className="text-gray-400 hover:text-gray-600"
+                    title="Fechar"
                   >
-                    fechar
+                    <FiX className="w-4 h-4" />
                   </button>
+                </div>
+
+                {/* Barra de progresso multicor */}
+                <div className="h-2.5 bg-gray-200 rounded-full overflow-hidden flex">
+                  <div
+                    className="bg-green-500 transition-all duration-500"
+                    style={{ width: `${pctEnviado}%` }}
+                  />
+                  <div
+                    className="bg-blue-400 transition-all duration-500 animate-pulse"
+                    style={{ width: `${pctEnviando}%` }}
+                  />
+                  <div
+                    className="bg-red-500 transition-all duration-500"
+                    style={{ width: `${pctErro}%` }}
+                  />
+                </div>
+
+                {/* Contadores */}
+                <div className="grid grid-cols-3 gap-2 mt-3 text-center">
+                  <div className="bg-white/60 rounded-lg py-1.5">
+                    <div className="text-lg font-bold text-green-700">{progresso.enviado}</div>
+                    <div className="text-[10px] text-green-600 font-medium uppercase">Enviadas</div>
+                  </div>
+                  <div className="bg-white/60 rounded-lg py-1.5">
+                    <div className="text-lg font-bold text-blue-700">{progresso.pendente + progresso.enviando}</div>
+                    <div className="text-[10px] text-blue-600 font-medium uppercase">Pendentes</div>
+                  </div>
+                  <div className="bg-white/60 rounded-lg py-1.5">
+                    <div className="text-lg font-bold text-red-700">{progresso.erro}</div>
+                    <div className="text-[10px] text-red-600 font-medium uppercase">Erros</div>
+                  </div>
                 </div>
               </div>
             )}
@@ -282,7 +368,7 @@ export default function DisparoPanel() {
               {enviando ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Disparando para {numerosValidos.length} número{numerosValidos.length !== 1 ? 's' : ''}...
+                  Disparando em segundo plano...
                 </>
               ) : (
                 <>

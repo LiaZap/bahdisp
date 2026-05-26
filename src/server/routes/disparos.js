@@ -29,34 +29,33 @@ router.get('/', auth, async (req, res) => {
   }
 })
 
-// Disparo simples: somente numeros + mensagem (sem vaga / medicos cadastrados)
+// Disparo simples ASSÍNCRONO: persiste disparos, responde rápido, processa em background.
+// Frontend usa GET /disparos/status/:protocolo para acompanhar o progresso em tempo real.
 router.post('/simples', auth, async (req, res) => {
   try {
     const { phones, mensagem, antiBlock = true, instanceId } = req.body
 
     if (!Array.isArray(phones) || phones.length === 0 || !mensagem?.trim()) {
-      return res.status(400).json({ message: 'Numeros e mensagem sao obrigatorios' })
+      return res.status(400).json({ message: 'Números e mensagem são obrigatórios' })
     }
 
-    // Normaliza numeros: so digitos
     const normalizados = phones
       .map(p => String(p).replace(/\D/g, ''))
       .filter(p => p.length >= 10)
 
     if (normalizados.length === 0) {
-      return res.status(400).json({ message: 'Nenhum numero valido' })
+      return res.status(400).json({ message: 'Nenhum número válido' })
     }
 
     const quiet = await getQuietHours()
     if (isQuietNow(quiet) && !req.body.forcar) {
       return res.status(409).json({
-        message: `Horario de silencio ativo (${quiet.inicio}h-${quiet.fim}h). Disparo bloqueado.`,
+        message: `Horário de silêncio ativo (${quiet.inicio}h-${quiet.fim}h). Disparo bloqueado.`,
         quietHours: quiet,
         code: 'QUIET_HOURS',
       })
     }
 
-    // Resolve instancia
     let instanceToken = null
     let instanceUsada = null
     if (instanceId) {
@@ -66,35 +65,95 @@ router.post('/simples', auth, async (req, res) => {
     }
     if (instanceUsada) instanceToken = instanceUsada.token
 
-    // Monta payload com variacao por destinatario (anti-bloqueio em mensagem livre)
     const lista = normalizados.map(numero => ({
-      medico: { _id: numero, whatsapp: numero },
+      numero,
       texto: antiBlock ? variarCustom(mensagem, numero) : mensagem,
     }))
 
-    const protocolo = `LMD-${Math.floor(Math.random() * 9000 + 1000)}`
+    const protocolo = `LMD-${Math.floor(Math.random() * 9000 + 1000)}-${Date.now().toString(36)}`
 
-    // Persiste como Disparo (sem vaga/medico cadastrado -> guarda numero no campo mensagem por enquanto)
-    const docsParaCriar = lista.map(({ medico, texto }) => ({
-      protocolo,
-      mensagem: texto,
-      numero: medico.whatsapp,
-      enviadoPor: req.user._id,
-    }))
+    // Persiste todos os disparos como 'pendente' imediatamente
+    const disparosCriados = await Disparo.insertMany(
+      lista.map(({ numero, texto }) => ({
+        protocolo,
+        mensagem: texto,
+        numero,
+        instance: instanceUsada?._id,
+        enviadoPor: req.user._id,
+        status: 'pendente',
+      }))
+    )
 
-    const resultados = await enviarMensagemComDelay(lista, 3000, 12000, instanceToken)
-
+    // Responde IMEDIATAMENTE com info para o frontend começar a polling
     res.json({
       protocolo,
       total: normalizados.length,
-      enviados: resultados.filter(r => r.status === 'enviado').length,
-      erros: resultados.filter(r => r.status === 'erro').length,
-      detalhes: resultados,
       instancia: instanceUsada?.nome || 'padrão (env)',
+      status: 'iniciado',
+    })
+
+    // Background: envia mensagens uma a uma, atualizando cada disparo
+    setImmediate(async () => {
+      const idsPorNumero = {}
+      for (const d of disparosCriados) idsPorNumero[d.numero] = d._id
+
+      for (const { numero, texto } of lista) {
+        const id = idsPorNumero[numero]
+        try {
+          await Disparo.findByIdAndUpdate(id, { status: 'enviando' })
+
+          const { enviarMensagem } = await import('../services/uazapi.js')
+          await enviarMensagem(numero, texto, instanceToken)
+
+          await Disparo.findByIdAndUpdate(id, {
+            status: 'enviado',
+            enviadoEm: new Date(),
+          })
+        } catch (err) {
+          await Disparo.findByIdAndUpdate(id, {
+            status: 'erro',
+            erro: err.message?.slice(0, 200) || 'Erro desconhecido',
+          })
+        }
+        // Delay aleatório entre 3 e 12 segundos
+        if (numero !== lista[lista.length - 1].numero) {
+          const delay = Math.floor(Math.random() * 9000) + 3000
+          await new Promise(r => setTimeout(r, delay))
+        }
+      }
     })
   } catch (err) {
     console.error('Erro disparo simples:', err)
-    res.status(500).json({ message: 'Erro ao enviar disparos' })
+    res.status(500).json({ message: 'Erro ao iniciar disparos' })
+  }
+})
+
+// Status agregado de um protocolo (para polling do frontend)
+router.get('/status/:protocolo', auth, async (req, res) => {
+  try {
+    const { protocolo } = req.params
+    const counts = await Disparo.aggregate([
+      { $match: { protocolo } },
+      { $group: { _id: '$status', count: { $sum: 1 } } },
+    ])
+
+    const base = { pendente: 0, enviando: 0, enviado: 0, entregue: 0, lido: 0, respondido: 0, erro: 0 }
+    counts.forEach(c => { base[c._id] = c.count })
+
+    const total = Object.values(base).reduce((a, b) => a + b, 0)
+    const concluidos = base.enviado + base.entregue + base.lido + base.respondido + base.erro
+    const done = total > 0 && concluidos === total
+
+    res.json({
+      protocolo,
+      total,
+      ...base,
+      concluidos,
+      done,
+      progress: total > 0 ? Math.round((concluidos / total) * 100) : 0,
+    })
+  } catch (err) {
+    res.status(500).json({ message: 'Erro ao buscar status' })
   }
 })
 
