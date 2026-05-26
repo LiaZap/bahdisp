@@ -1,11 +1,14 @@
-import { FiCamera, FiPhone, FiMoreVertical, FiSmile, FiMic, FiPaperclip } from 'react-icons/fi'
+import { FiCamera, FiPhone, FiMoreVertical, FiSmile, FiMic, FiPaperclip, FiEye } from 'react-icons/fi'
 
-export default function WhatsAppPreview({ mensagem, nomeRemetente }) {
+export default function WhatsAppPreview({ mensagem, nomeRemetente, destinatario }) {
   const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 
   return (
     <div className="flex flex-col items-center">
-      <h4 className="text-sm font-semibold text-gray-600 mb-3">Preview da Mensagem</h4>
+      <div className="flex items-center gap-2 mb-3">
+        <FiEye className="w-3.5 h-3.5 text-gray-400" />
+        <h4 className="text-sm font-semibold text-gray-600">Preview (apenas visualização)</h4>
+      </div>
 
       {/* Phone Frame */}
       <div className="w-[320px] bg-gray-900 rounded-[2.5rem] p-3 shadow-2xl shadow-gray-400/30">
@@ -31,7 +34,7 @@ export default function WhatsAppPreview({ mensagem, nomeRemetente }) {
               </svg>
             </div>
             <div className="flex-1">
-              <p className="text-white text-sm font-medium">Médico</p>
+              <p className="text-white text-sm font-medium">{destinatario || 'Destinatário'}</p>
               <p className="text-green-200 text-[10px]">online</p>
             </div>
             <div className="flex items-center gap-4 text-white">
@@ -63,17 +66,9 @@ export default function WhatsAppPreview({ mensagem, nomeRemetente }) {
               </p>
               <div className="text-[12.5px] text-gray-800 whitespace-pre-wrap leading-relaxed">
                 {mensagem || (
-                  <>
-                    <span className="font-bold">🏥 NOVA VAGA DISPONÍVEL!</span>{'\n\n'}
-                    <span className="font-bold">📋 Vaga:</span> Plantão UTI{'\n'}
-                    <span className="font-bold">🏢 Local:</span> Hospital São Lucas{'\n'}
-                    <span className="font-bold">📅 Data:</span> 25/05/2026{'\n'}
-                    <span className="font-bold">⏰ Horário:</span> 19h às 07h{'\n'}
-                    <span className="font-bold">💰 Valor:</span> R$ 1.800,00{'\n\n'}
-                    <span className="font-bold">📍 Endereço:</span> Rua das Flores, 123{'\n\n'}
-                    Interessado? Responda esta mensagem!{'\n\n'}
-                    <span className="italic text-gray-500">{nomeRemetente || 'bah!'} - Vagas Médicas</span>
-                  </>
+                  <span className="italic text-gray-400">
+                    A mensagem que você digitar aparecerá aqui...
+                  </span>
                 )}
               </div>
               <div className="flex items-center justify-end gap-1 mt-1">

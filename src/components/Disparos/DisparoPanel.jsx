@@ -185,7 +185,7 @@ export default function DisparoPanel() {
                             {i.nome}
                           </p>
                           <p className="text-xs text-gray-500 truncate font-mono">
-                            {i.phone || 'sem número'}
+                            {i.phone ? i.phone : (i.status === 'conectado' ? 'pronto para enviar' : 'sem número')}
                           </p>
                         </button>
                       )
@@ -355,6 +355,19 @@ export default function DisparoPanel() {
                     <div className="text-lg font-bold text-red-700">{progresso.erro}</div>
                     <div className="text-[10px] text-red-600 font-medium uppercase">Erros</div>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Aviso de envio real */}
+            {numerosValidos.length > 0 && mensagem.trim() && !enviando && !progresso && (
+              <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 flex items-start gap-2">
+                <FiAlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 text-sm">
+                  <p className="font-semibold text-amber-900">⚠ Atenção: envio real</p>
+                  <p className="text-xs text-amber-800 mt-0.5">
+                    Ao clicar em <strong>Disparar</strong>, a mensagem será enviada DE VERDADE para os <strong>{numerosValidos.length} número{numerosValidos.length !== 1 ? 's' : ''}</strong> via WhatsApp da instância <strong>{instanciaAtual?.nome || 'padrão'}</strong>. O preview acima é só uma visualização.
+                  </p>
                 </div>
               </div>
             )}

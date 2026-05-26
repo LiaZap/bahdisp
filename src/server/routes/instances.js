@@ -96,6 +96,18 @@ router.post('/:id/connect', auth, async (req, res) => {
     if (isConnected) instance.status = 'conectado'
     else if (qrcode) instance.status = 'aguardando'
 
+    // Captura o telefone real conectado (vários formatos possíveis)
+    const phoneDetected = resp?.phone
+      || resp?.instance?.phone
+      || resp?.me?.id
+      || resp?.wid
+      || resp?.user?.id
+      || resp?.instance?.wid
+    if (phoneDetected && typeof phoneDetected === 'string') {
+      const cleanPhone = phoneDetected.replace(/[@:].*$/, '').replace(/\D/g, '')
+      if (cleanPhone.length >= 10) instance.phone = cleanPhone
+    }
+
     await instance.save()
 
     res.json({
@@ -119,10 +131,24 @@ router.get('/:id/status', auth, async (req, res) => {
     const conn = resp?.connected
       || resp?.status === 'CONNECTED'
       || resp?.status === 'connected'
-    instance.status = conn ? 'conectado' : (instance.status === 'conectado' ? 'desconectado' : instance.status)
-    await instance.save()
+      || resp?.instance?.status === 'CONNECTED'
 
-    res.json({ ...resp, dbStatus: instance.status })
+    instance.status = conn ? 'conectado' : (instance.status === 'conectado' ? 'desconectado' : instance.status)
+
+    // Tenta extrair o telefone real conectado (vários formatos possíveis)
+    const phoneDetected = resp?.phone
+      || resp?.instance?.phone
+      || resp?.me?.id
+      || resp?.wid
+      || resp?.user?.id
+      || resp?.instance?.wid
+    if (phoneDetected && typeof phoneDetected === 'string') {
+      const cleanPhone = phoneDetected.replace(/[@:].*$/, '').replace(/\D/g, '')
+      if (cleanPhone.length >= 10) instance.phone = cleanPhone
+    }
+
+    await instance.save()
+    res.json({ ...resp, dbStatus: instance.status, phone: instance.phone })
   } catch (err) {
     res.status(500).json({ message: err.message })
   }
