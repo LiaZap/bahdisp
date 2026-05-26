@@ -41,7 +41,8 @@
       "Bash(git commit -m 'chore: remove stray file *)",
       "Bash(git commit -m 'refactor\\(configuracoes\\): remove WhatsApp connection section *)",
       "Bash(git commit -m 'feat: CLI script to update user \\(updateUser.js\\) *)",
-      "Bash(git commit -m 'fix: acentuacao e ortografia nas paginas visiveis + melhora seletor de instancia *)"
+      "Bash(git commit -m 'fix: acentuacao e ortografia nas paginas visiveis + melhora seletor de instancia *)",
+      "Bash(git commit -m 'fix\\(variacao\\): variarCustom agora gera variacoes neutras *)"
     ]
   }
 }

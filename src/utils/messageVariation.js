@@ -94,15 +94,43 @@ function formatValor(v) {
 }
 
 /**
- * Aplica variações leves em mensagem custom (preserva o texto, só varia
- * saudação e assinatura).
+ * Aplica variações sutis e GENÉRICAS em mensagem livre (sem adicionar contexto).
+ * Preserva o significado e a aparência visual — só muda bytes para evitar
+ * detecção de spam por duplicação exata.
+ *
+ * Variações aplicadas (determinísticas por seedKey):
+ *  - Caractere invisível (zero-width space) no início (50% das vezes)
+ *  - Espaço extra ao final (0-2 espaços)
+ *  - Quebra de linha extra ao final (0-2)
+ *  - Troca pontuação final entre "!" e "." quando aplicável
  */
 export function variarCustom(texto, seedKey) {
   if (!texto) return ''
   const seed = hashString(seedKey)
-  const greeting = pick(GREETINGS, seed)
-  const signoff = pick(SIGNOFFS, seed)
-  return `${greeting}${texto}\n\n${signoff}`
+  const mod = seed % 8
+
+  let resultado = texto.trim()
+
+  // Variação 1: zero-width space invisível no início (algumas vezes)
+  if (mod % 2 === 0) {
+    resultado = '​' + resultado
+  }
+
+  // Variação 2: troca pontuação final ! ↔ . (quando aplicável)
+  if (mod >= 4) {
+    if (resultado.endsWith('!')) {
+      resultado = resultado.slice(0, -1) + '.'
+    } else if (resultado.endsWith('.')) {
+      resultado = resultado.slice(0, -1) + '!'
+    }
+  }
+
+  // Variação 3: espaços extras invisíveis ao final (0-2)
+  const espacosExtras = ['', ' ', '  '][seed % 3]
+  // Variação 4: quebras de linha extras ao final (1 ou 2)
+  const quebrasExtras = ['\n', '\n\n'][seed % 2]
+
+  return resultado + espacosExtras + quebrasExtras
 }
 
 /**
